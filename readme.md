@@ -1,4 +1,4 @@
-#Simple Voice AI
+# Simple Voice AI
 
 This is my first time working with python and also my first time working with machine learning
 
