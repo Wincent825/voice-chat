@@ -4,4 +4,4 @@ This is my first time working with python and also my first time working with ma
 
 before you run the program, install python3 and run the command pip install SpeechRecognition
 
-I use the classical method of trail and error
+I use the classical method of trial and error
