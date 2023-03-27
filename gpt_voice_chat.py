@@ -26,18 +26,13 @@ def listen():
 
 def quit():
     exit()
-
-while True:
-
-    if listen() == "quit":
-        quit()
         
-    completion = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        messages = [{"role": "user", "content": listen()}],
-        max_tokens = 1024,
-        temperature = 0.8)
+completion = openai.ChatCompletion.create(
+    model="gpt-3.5-turbo",
+    messages = [{"role": "user", "content": listen()}],
+    max_tokens = 1024,
+    temperature = 0.8)
 
-    message = completion.choices[0].message.content
-    speak(str(message))
-    print(message)
+message = completion.choices[0].message.content
+speak(str(message))
+print(message)

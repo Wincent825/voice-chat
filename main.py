@@ -26,48 +26,61 @@ def listen():
 def quit():
     exit()
 
-conn = sqlite3.connect('responses.db')
+try:
+    conn = sqlite3.connect('responses.db')
+except sqlite3.Error:
+    print("Error connecting to database")
 c = conn.cursor()
-c.execute('CREATE TABLE IF NOT EXISTS responses (keyword text, response text)')
-
-# The keywords and responses
-keywords = ["time", "joke", "riddle", "fact", "quit", "pasta"]
-responses = ["It is bedtime", "What do you call a bear with no teeth? A gummy bear!", "What is full of holes but still holds water?", "Did you know that the average person spends 6 months of their life waiting on a red light to turn green?", "Goodbye!", "I like pasta!"]
-
-for i in range(len(keywords)):
-    c.execute("INSERT INTO responses VALUES (?, ?)", (keywords[i], responses[i]))
-conn.commit()
-
+try:
+    c.execute('CREATE TABLE IF NOT EXISTS responses (keyword text, response text)')
+except sqlite3.Error:
+    print("Error creating table")
 
 # The main loop
 while True:
-    # Listen to the microphone
-    text = listen()
-    print(text)
-    if text == "quit":
-        quit()
+    try:
 
-    response_given = False
-    # If question is recognized, respond with the correct response
-    c.execute('SELECT response FROM responses WHERE keyword = ?', (text,))
-    result = c.fetchone()
-    if result is not None:
-        speak(result[0])
-        response_given = True
+        # Listen to the microphone
+        text = listen()
+        print(text)
+        if text == "quit":
+            quit()
 
-    # If question is not recognized, add the new response
-    if response_given == False:
-        speak("I don't know how to respond to that.")
-        speak("What is the keyword of your question?")
-        new_keyword = listen()
-        print(keywords)
-        speak("What should I answer?")
-        new_response = listen()
-        # Add the new keyword and response to the database
-        c.execute('INSERT INTO responses VALUES (?, ?)', (new_keyword, new_response))
-        conn.commit()
-        speak("I have learned a new response!")
-        
-    
-    
+        response_given = False
+        # If question is recognized, respond with the correct response
+        keywords = [row[0] for row in c.execute('SELECT keyword FROM responses')]
+        for word in text.split():
+            if word.lower() in keywords:
+                c.execute('SELECT response FROM responses WHERE keyword = ?', (word.lower(),))
+                result = c.fetchone()
+                if result is not None:
+                    # special case for riddle
+                    if result[0] == "What is full of holes but still holds water?":
+                        speak("What is full of holes but still holds water?")
+                        time.sleep(5)
+                        speak("A sponge!")
+                        response_given = True
+                        break
+                    else:
+                        speak(result[0])
+                        response_given = True
+                        break
 
+        # If question is not recognized, add the new response
+        if response_given == False:
+            speak("I don't know how to respond to that.")
+            speak("What is the keyword of your question?")
+            new_keyword = listen()
+            speak("What should I answer?")
+            new_response = listen()
+            # Add the new keyword and response to the database
+            try:
+                c.execute('INSERT INTO responses VALUES (?, ?)', (new_keyword.lower(), new_response))
+                conn.commit()
+                speak("I have learned a new response!")
+            except sqlite3.Error as e:
+                print(f"Error adding new response: {e}")
+    except sr.UnknownValueError:
+        print("Error listening to microphone")
+    except sr.RequestError as e:
+        print(f"Error: {e}")
