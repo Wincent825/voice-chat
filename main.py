@@ -1,5 +1,7 @@
 import speech_recognition as sr
 import pyttsx3
+import sqlite3
+import time
 
 r = sr.Recognizer()
 engine = pyttsx3.init()
@@ -24,46 +26,34 @@ def listen():
 def quit():
     exit()
 
+conn = sqlite3.connect('responses.db')
+c = conn.cursor()
+c.execute('CREATE TABLE IF NOT EXISTS responses (keyword text, response text)')
+
+# The keywords and responses
 keywords = ["time", "joke", "riddle", "fact", "quit", "pasta"]
 responses = ["It is bedtime", "What do you call a bear with no teeth? A gummy bear!", "What is full of holes but still holds water?", "Did you know that the average person spends 6 months of their life waiting on a red light to turn green?", "Goodbye!", "I like pasta!"]
+
+for i in range(len(keywords)):
+    c.execute("INSERT INTO responses VALUES (?, ?)", (keywords[i], responses[i]))
+conn.commit()
+
 
 # The main loop
 while True:
     # Listen to the microphone
     text = listen()
     print(text)
+    if text == "quit":
+        quit()
 
     response_given = False
     # If question is recognized, respond with the correct response
-    for i in range(len(keywords)):
-        if text == None:
-            speak("I didn't catch that. Please try again.")
-            break
-        
-        if "quit" in text:
-            speak(responses[i])
-            quit()
-
-        print(keywords[i])
-        if keywords[i] in text:
-            
-            if "riddle" in text:
-                speak(responses[i])
-                answer = listen()
-                if "a sponge" in answer or "sponge" in answer:
-                    speak("Correct!")
-                    response_given = True
-                    break
-
-                else:
-                    speak("Incorrect! The answer is a sponge.")
-                    response_given = True
-                    break
-
-            else:
-                speak(responses[i])
-                response_given = True
-                break
+    c.execute('SELECT response FROM responses WHERE keyword = ?', (text,))
+    result = c.fetchone()
+    if result is not None:
+        speak(result[0])
+        response_given = True
 
     # If question is not recognized, add the new response
     if response_given == False:
@@ -71,18 +61,13 @@ while True:
         speak("What is the keyword of your question?")
         new_keyword = listen()
         print(keywords)
-        for i in range(len(keywords)):
-            if keywords[i] in new_keyword:
-                speak("I already know how to respond to that.")
-                speak(responses[i])
-                break
-        keywords.append(new_keyword)
         speak("What should I answer?")
-        responses.append(listen())
-        print(responses)
+        new_response = listen()
+        # Add the new keyword and response to the database
+        c.execute('INSERT INTO responses VALUES (?, ?)', (new_keyword, new_response))
+        conn.commit()
         speak("I have learned a new response!")
         
     
     
-    # Speak the recognized text
-    #speak(text)
+
